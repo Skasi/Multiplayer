@@ -546,7 +546,7 @@ namespace Multiplayer.Client
                 {
                     Match snippets;
                     // Split addr into ip (removing [] brackets) and :port
-                    snippets = Regex.Match(addr, @"\[?(.+)\]?(:\d)?");
+                    snippets = Regex.Match(addr, @"\[?([a-zA-Z0-9:]+)\]?(:\d+)?");
                     ip = snippets.Groups[1].Value;
                     if (snippets.Groups[2].Success)
                         // Remove first char : before passing port
