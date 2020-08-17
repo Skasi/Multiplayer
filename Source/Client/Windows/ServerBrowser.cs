@@ -1,4 +1,4 @@
-﻿extern alias zip;
+extern alias zip;
 
 using LiteNetLib;
 using Multiplayer.Common;
@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Xml;
 using UnityEngine;
@@ -538,17 +539,31 @@ namespace Multiplayer.Client
             if (Widgets.ButtonText(new Rect(inRect.center.x - btnWidth / 2, 60f, btnWidth, 35f), "MpConnectButton".Translate()))
             {
                 string addr = MultiplayerMod.settings.serverAddress.Trim();
+                string ip;
                 int port = MultiplayerServer.DefaultPort;
-                string[] hostport = addr.Split(':');
-                if (hostport.Length == 2)
-                    int.TryParse(hostport[1], out port);
+
+                if (Regex.IsMatch(addr, ":.*:"))
+                {
+                    Match snippets;
+                    // Split addr into ip (removing [] brackets) and :port
+                    snippets = Regex.Match(addr, @"\[?(.+)\]?(:\d)?");
+                    ip = snippets.Groups[1].Value;
+                    if (snippets.Groups[2].Success)
+                        // Remove first char : before passing port
+                        int.TryParse(snippets.Groups[2].Value.Remove(0, 1), out port);
+                }
                 else
-                    port = MultiplayerServer.DefaultPort;
+                {
+                    string[] snippets = addr.Split(':');
+                    ip = snippets[0];
+                    if (snippets.Length == 2)
+                        int.TryParse(snippets[1], out port);
+                }
 
                 Log.Message("Connecting directly");
                 try
                 {
-                    Find.WindowStack.Add(new ConnectingWindow(hostport[0], port) { returnToServerBrowser = true });
+                    Find.WindowStack.Add(new ConnectingWindow(ip, port) { returnToServerBrowser = true });
                     MultiplayerMod.settings.Write();
                     Close(false);
                 }

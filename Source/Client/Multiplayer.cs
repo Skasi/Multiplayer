@@ -1,4 +1,4 @@
-﻿//extern alias zip;
+//extern alias zip;
 
 using System;
 using System.Collections.Generic;
@@ -182,18 +182,30 @@ namespace Multiplayer.Client
 
         private static void HandleCommandLine()
         {
-            if (GenCommandLine.TryGetCommandLineArg("connect", out string ip))
+            if (GenCommandLine.TryGetCommandLineArg("connect", out string addr))
             {
                 int port = MultiplayerServer.DefaultPort;
+                string ip = null;
 
-                var split = ip.Split(':');
-                if (split.Length == 0)
+                if (addr.Length == 0)
                     ip = "127.0.0.1";
-                else if (split.Length >= 1)
-                    ip = split[0];
-
-                if (split.Length == 2)
-                    int.TryParse(split[1], out port);
+                else if (Regex.IsMatch(addr, ":.*:"))
+                {
+                    Match snippets;
+                    // Split ip into address (removing [] brackets) and :port
+                    snippets = Regex.Match(addr, @"\[?(.+)\]?(:\d)?");
+                    ip = snippets.Groups[1].Value;
+                    if (snippets.Groups[2].Success)
+                        // Remove first char : before passing port
+                        int.TryParse(snippets.Groups[2].Value.Remove(0, 1), out port);
+                }
+                else
+                {
+                    string[] snippets = addr.Split(':');
+                    ip = snippets[0];
+                    if (snippets.Length == 2)
+                        int.TryParse(snippets[1], out port);
+                }
 
                 DoubleLongEvent(() => ClientUtil.TryConnect(ip, port), "Connecting");
             }

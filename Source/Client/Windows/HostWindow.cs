@@ -1,4 +1,4 @@
-﻿using Multiplayer.Common;
+using Multiplayer.Common;
 using RimWorld;
 using System;
 using System.Collections.Generic;
@@ -7,6 +7,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using UnityEngine;
 using Verse;
@@ -193,22 +194,36 @@ namespace Multiplayer.Client
             Close(true);
         }
 
-        private bool TryParseIp(string ip, out string addr, out int port)
+        private bool TryParseIp(string addr, out string ip, out int port)
         {
+            ip = null;
             port = MultiplayerServer.DefaultPort;
-            addr = null;
 
-            string[] parts = ip.Split(':');
+            if (Regex.IsMatch(addr, ":.*:"))
+            {
+                Match snippets;
+                // Split ip into address (removing [] brackets) and :port
+                snippets = Regex.Match(addr, @"\[?(.+)\]?(:\d)?");
+                ip = snippets.Groups[1].Value;
+                if (snippets.Groups[2].Success)
+                    // Remove first char : before passing port
+                    int.TryParse(snippets.Groups[2].Value.Remove(0, 1), out port);
+            }
+            else
+            {
+                string[] snippets = addr.Split(':');
+                ip = snippets[0];
+                if (snippets.Length == 2)
+                    int.TryParse(snippets[1], out port);
+            }
 
-            if (!IPAddress.TryParse(parts[0], out IPAddress ipAddr))
+            if (!IPAddress.TryParse(ip, out IPAddress ipAddr))
             {
                 Messages.Message("MpInvalidAddress".Translate(), MessageTypeDefOf.RejectInput, false);
                 return false;
             }
 
-            addr = parts[0];
-
-            if (parts.Length >= 2 && (!int.TryParse(parts[1], out port) || port < 0 || port > ushort.MaxValue))
+            if (port < 0 || port > ushort.MaxValue)
             {
                 Messages.Message("MpInvalidPort".Translate(), MessageTypeDefOf.RejectInput, false);
                 return false;
